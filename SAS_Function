@@ -1,0 +1,113 @@
+options cmplib = work.funcs;
+proc fcmp outlib=work.funcs.math;
+	function azimut (az_1,az_2, lat_1, lat_2, lon_1, lon_2);
+/*	ШАГ 0 ОБЪЯВЛЯЕМ ОСНОВНЫЕ ПЕРЕМЕННЫЕ*/
+		rad = 57.2958;  /* радиан = угол */
+		D  = 65;       /* диапазон свечения*/
+/*	ШАГ 1 ОПРЕДЕЛЯЕМ УГОЛ НАПРАВЛЕНИЯ ОТ МАТЕРИНСКОЙ БС */
+
+		ars = arsin(((lon_2-lon_1)/sqrt((lat_2-lat_1)**2 + (lon_2-lon_1)**2))); /*считаем синус*/
+		arc = arcos(((lat_2-lat_1)/sqrt((lat_2-lat_1)**2 + (lon_2-lon_1)**2))); /*считаем косинус*/
+	degree_sin = round (rad * ars, 0.01);
+	degree_cos = round (rad * arc, 0.01);
+							/*	ОПРЕДЕЛЯЕМ ПЛОСКОСТЬ*/
+	 if degree_sin = degree_cos and degree_sin =90 then degree = 0; /*частные случаи */
+		else if degree_sin = degree_cos and degree_sin =0 then degree = 90; /*частные случаи */
+			else if degree_sin = degree_cos then degree =90 - degree_sin; /* 0 - П/2 */
+				 else if abs(degree_sin) = degree_cos then degree = 90 + abs(degree_sin); /* П/2 - П */
+					 else if degree_sin < 0 then degree = 270 + degree_sin; /* П - 3П/2 */
+						 else if degree_sin + degree_cos = 180 then degree = 270+degree_sin; /* 3П/2 - 2П */
+							
+				IF degree <=45 then degree +360;
+
+/*	ШАГ 2 ОПРЕДЕЛЯЕМ ДИАПАЗОН АЗИМУТОВ*/
+	if az_1>315 and az_1<360 then az1 = az_1;
+	else if az_1 <45 then   az1 = az_1 +360;
+	else az1 = az_1;
+			min_az1 = az1 - D/2;
+			max_az1 = az1 + D/2;
+	if az_2>315 and az_2<360 then az2 = az_2;
+	else if az_2 <45 then   az2 = az_2 +360;
+	else az2 = az_2;	
+			min_az2 = az2 - D/2;
+			max_az2 = az2 + D/2;
+
+good_azimut =0;
+/*	ШАГ 3 ИЩЕМ ПЕРЕСЕЧЕНИЯ ПО СЕКТОРАМ */
+			/*-45 < Сектор1 < 45*/
+			/*45  < Сектор2 < 135*/
+			/*135 < Сектор3 < 225*/
+			/*225 < Сектор4 < 315*/
+	DO I=0 TO 3;
+		step = 90;
+		start_1 = 45;
+		end_1 = 135;
+		start_2 = 225;
+		end_2 = 315;
+	
+		if i>=2 then do;
+			start_2 = -135;
+			end_2 = -45;
+		end;
+		if i <=1 then do;
+			min_az22 = min_az2 - 180;
+			maz_az22 = max_az2 - 180;
+		end;
+		if i>1 then do;
+			min_az22 = min_az2 + 180;
+			maz_az22 = max_az2 + 180;
+		end;
+
+		IF degree >start_1 + (step*i) and degree < end_1 + (step*i) then do;
+/*			a= "Пройден первый шаг";*/
+/*			put a;*/
+			if (az1 >start_1 + (step*i) - d/2 and az1<end_1 + (step*i) +d/2) then do;
+/*			a= "Пройден втонрой шаг";*/
+/*			put a;*/
+				if (az2 > start_2 + (step*i - d/2) and az2 < end_2 + (step*i) +d/2) then do;
+/*				a= "Пройден третий шаг";*/
+/*			put a;*/
+					if (min_az1>=min_az22 and min_az1<=maz_az22) or (max_az1 >= min_az22 and max_az1 <= maz_az22) 
+						then good_azimut = 1;
+				end;
+			end;
+		END;
+		if good_azimut= 1 then i=3;
+	END;
+
+
+	/*	ШАГ 4 ИЩЕМ ПЕРЕСЕЧЕНИЯ НА ГРАНИЦАХ СЕКТОРОВ */
+
+		
+
+
+/*	ДОП ПРОВЕРКА НА БИСЕКТРИСУ*/
+	if az_1 = 315 and az_2 = 135 and degree = 315 then good_azimut = 1;
+	if az_1 = 135 and az_2 = 315 and degree = 135 then good_azimut = 1;
+	if az_1 = 225 and az_2 = 45 and degree = 225 then good_azimut = 1;
+	if az_1 = 45 and az_2 = 225 and degree = 45 then good_azimut = 1;
+
+				
+	return (good_azimut);
+	endsub;
+run;
+
+
+/*ДЛЯ ПРВОЕРКИ*/
+
+/**/
+/*data _null_;*/
+/*az_1 =0 ;*/
+/*az_2 = 180;*/
+/*lat_1 = 56.78444;*/
+/*lat_2 = 56.80997;*/
+/*lon_1 = 35.94611;*/
+/*lon_2 = 35.93794;*/
+/*x= azimut (az_1,az_2, lat_1, lat_2, lon_1, lon_2);*/
+/**/
+/*rad = 57.2958;*/
+/*		ars = arsin (((lon_2-lon_1)/sqrt((lat_2-lat_1)**2 + (lon_2-lon_1)**2)));*/
+/*		degree = round (rad * ars, 0.01)+360; */
+/*put  x;*/
+/*run;*/
+
