@@ -1,0 +1,112 @@
+/*105598751  12245*/
+/*cell= 108019231 and cel_2=13825*/
+/*48637	30255	3531*/
+
+/*PL_00_817	PL_00_802*/
+
+data cover3 ;
+set COMPARE_1_TTT /*(where= (cell= 48637 and cel_2=3531))*/ 
+(where=(pl_number = 'PL_00_817' and standart =	'LTE-1800' and pL_2 = 'PL_00_802' and st_2 = 'LTE-1800'))
+;
+	rad = 57.2958;
+	DD=65;
+	
+		STEP = 0.1;
+		Y_step = 0.001;
+
+
+	azimut = azimut;  lat_1 =lat  /* lat */; 	lon_1  = new_longitude  /* lon */; DIST = max_km ;
+	azimut1 =az_2;   lat_2 =lat_2  /* lat */;    lon_2 = lon_2_2  /* lon */; DIST1 = max_km_2; 
+			ars = sin(arsin((lon_2-lon_1)/sqrt((lat_2-lat_1)**2 + (lon_2-lon_1)**2)));
+				x0=0; y0=0;
+				distance = geodist(lat_1, lon_1, lat_2,lon_2);
+					R1 = DIST;
+					R2 = DIST1;
+		degree = main_degree (lat_1, lat_2, lon_1, lon_2);
+			x11 = distance * ars;
+			y11 = sqrt (distance**2 - x11**2);
+				if degree>90 and degree<270 then y11= -y11;
+
+
+
+/*ЗАПОЛНЯЕМ ПЕРВЫЙ МАССИВ*/
+					declare hash  mas();
+					declare hiter iter ('mas');
+							rc = mas.defineKey ('x_f', 'y_f');
+							rc = mas.defineData ('x_f' , 'y_f');
+							rc = mas.defineDone();
+			
+		
+					DO II=0.01 TO 359.99 by step;
+						C=0;  x1=0; y1=0;  x_f=0; y_f=0;  sign=1;
+
+						DO UNTIL(C>DIST);
+									IF ii<0 then do; 				new_ii = (-90-ii); sign= 1; 	end;
+									IF ii<90 and ii>=0 then do; 		new_ii = (90 -ii); sign= 1; 	end;
+									IF ii>=90 and ii<180 then do;	new_ii = -1*(ii-90); sign = -1; end;
+									IF ii>=180 and ii <270 then do;	new_ii = 270-ii; sign = -1;		end;
+									IF II>=270 and II <360 then do;  new_ii = -1*(ii-270); sign =1;	end;
+
+							tang = tan(new_ii/rad); 
+							y1 + (sign*Y_step);
+							x1 = y1 / (tang);
+
+				
+								C = sqrt(x1**2+y1**2);
+										x_f= ROUND(x1 + x0,0.01);
+										y_f= ROUND(y1 + y0,0.01);
+							rc = mas.ref();
+						END;
+					END;
+
+			
+/*ЗАПОЛНЯЕМ ВТОРОЙ МАССИВ*/
+		declare hash  mas_2();
+			rc2 = mas_2.defineKey ('x_f' , 'y_f');
+			rc2 = mas_2.defineData ('x_f' , 'y_f');
+			rc2 = mas_2.defineDone();
+
+					DO II=0.01 TO 359.99 by step;
+						tang = tan (ii/rad);  C=0;  x1=0; y1=0;  x_f=0; y_f=0;
+						put II;
+
+						
+						do until (C>DIST1);
+									IF ii<0 then do; 				new_ii = (-90-ii); sign= 1; 	end;
+									IF ii<90 and ii>=0 then do; 		new_ii = (90 -ii); sign= 1; 	end;
+									IF ii>=90 and ii<180 then do;	new_ii = -1*(ii-90); sign = -1; end;
+									IF ii>=180 and ii <270 then do;	new_ii = 270-ii; sign = -1;		end;
+									IF II>=270 and II <360 then do;  new_ii = -1*(ii-270); sign =1;	end;
+
+							tang = tan(new_ii/rad); 
+							y1 + (sign*Y_step);
+							x1 = y1 / (tang);
+
+								C = sqrt(x1**2+y1**2);
+										x_f= ROUND(x1 + x11, 0.01);
+										y_f= ROUND(y1 + y11, 0.01);
+							rc2 = mas_2.ref();
+						end;
+					END;
+
+			i=0;
+			rc = iter.first();
+			   do while (rc = 0);
+					rc2= mas_2.find() ;
+						IF RC2 = 0 then I+1;
+			      rc = iter.next();
+				end;	
+	
+				total_count_1 = mas.num_items;
+				total_count_2 = mas_2.num_items;
+				UNION = I;
+				COVER  = I/ total_count_2;
+		keep  /*lac cell lac_2 cel_2*/ PL_NUMBER standart PL_2 st_2 total_count_1 total_count_2 UNION COVER;
+
+
+
+
+	rc = mas.output(dataset: "work.out");
+	rc2 = mas_2.output(dataset: "work.out2");
+
+run;
